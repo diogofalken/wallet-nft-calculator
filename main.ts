@@ -2,6 +2,7 @@ import { Table } from "https://deno.land/x/cliffy@v0.20.1/table/mod.ts";
 import { Wallet } from "./@types/Wallet.ts";
 
 const searchByName = ['101dcbab5b3c6d18f9121613cb999d12600e5e7e77c147d455b51443'];
+const ignorePolicies = ['a0028f350aaabe0545fdcb56b039bfb08e4bb4d8c4d7c3c7d481c235'];
 
 async function getFloor(search: string) {
   const { results } = await fetchListings(search, true);
@@ -63,6 +64,8 @@ async function main() {
   
   console.log("Loading...");
   for (const token of jsonWallet.tokens) {
+    if(ignorePolicies.includes(token.policy)) continue;
+
     const curValue = await getFloor(searchByName.includes(token.policy) ? token.name.replace(/\d+$/, '') : token.policy);
     totalADA += (token.quantity * curValue);
     table.push([token.name, token.quantity, curValue]);
