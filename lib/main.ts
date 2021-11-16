@@ -13,11 +13,11 @@ const ignorePolicies = [
 async function getFloor(search: string) {
   const { results } = await fetchListings(search, true);
 
-    if (results.length === 0) {
-      const { results } = await fetchListings(search, false);
-      
-      return convertADA(results[0]?.price);
-    } 
+  if (results.length === 0) {
+    const { results } = await fetchListings(search, false);
+
+    return convertADA(results[0]?.price);
+  }
 
   return convertADA(results[0]?.price);
 }
@@ -77,7 +77,7 @@ export async function generateReport(jsonWallet: Wallet) {
 }
 
 function convertADA(price: number) {
-  if(!price) {
+  if (!price) {
     return 0;
   }
 
