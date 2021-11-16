@@ -1,0 +1,68 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  github_build:
+    name: Build release binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          [
+            x86_64-unknown-linux-gnu,
+            x86_64-pc-windows-msvc,
+            x86_64-apple-darwin,
+            aarch64-apple-darwin,
+          ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Build | Pretty Tag
+        id: pretty_tag
+        run: |
+          echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: Build | Checkout
+        uses: actions/checkout@v2
+
+      - name: Build | Deno
+        uses: denoland/setup-deno@v1
+
+      - name: Build | Compile
+        run: |
+          mkdir ~/target
+          deno compile --allow-read --allow-net --allow-write --target ${{ matrix.target }} --output ~/target/wallet-nft-calculator-${{ matrix.target }}-${{ steps.pretty_tag.outputs.VERSION }} lib/main.ts
+
+      - name: Build | Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: wallet-nft-calculator-${{ matrix.target }}-${{ steps.pretty_tag.outputs.version }}
+          path: ~/target/wallet-nft-calculator*
+
+  github_release:
+    name: Create GitHub Release
+    needs: github_build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Release | Checkout
+        uses: actions/checkout@v2
+
+      - name: Release | Download Artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Release | Checksums
+        run: for file in wallet-nft-calculator*/wallet-nft-calculator*; do openssl dgst -sha256 -r "$file" | awk '{print $1}' > "${file}.sha256"; done
+
+      - name: Release | Notes
+        run: git log --pretty=format:"%s" $(git describe --abbrev=0 --tags `git rev-list --tags --skip=1 --max-count=1`)..$(git describe --tags) > RELEASE.md
+
+      - name: Release | Publish
+        uses: softprops/action-gh-release@v1
+        with:
+          files: wallet-nft-calculator*/wallet-nft-calculator*
+          body_path: RELEASE.md
